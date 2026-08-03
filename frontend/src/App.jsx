@@ -49,6 +49,12 @@ const STATS = [
   { value: '<5s', label: 'TYPICAL RUNTIME', color: c.cyan },
 ]
 
+const EXAMPLES = [
+  'Inbound SSH connection from external IP address',
+  'Suspicious encoded PowerShell execution',
+  'Service account authenticating from two countries in 10 mins',
+]
+
 /* ---------------------------------------------------------------------
    PRIMITIVES
 --------------------------------------------------------------------- */
@@ -126,11 +132,16 @@ function Header() {
 }
 
 /* ---------------------------------------------------------------------
-   HERO
+   HERO & PROMPT FORM COMBINED (Pulled Up Closer)
 --------------------------------------------------------------------- */
-function Hero() {
+function HeroAndForm({ onSubmit, loading, promptValue, setPromptValue }) {
+  const submit = () => {
+    if (!promptValue.trim() || loading) return
+    onSubmit(promptValue)
+  }
+
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden pt-10 pb-6 sm:pt-14 sm:pb-8">
       <div
         className="pointer-events-none absolute inset-0"
         style={{
@@ -142,23 +153,77 @@ function Hero() {
           WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 20%, black 30%, transparent 75%)',
         }}
       />
-      <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
-        <div className="mx-auto max-w-2xl text-center animate-fadeUp">
+      <div className="relative mx-auto max-w-4xl px-6 text-center">
+        <div className="animate-fadeUp">
           <Pill tone="blue">
             <Sparkles size={12} /> Multi-format · Autonomous · SOC-Ready
           </Pill>
 
-          <h1 className="mt-6 font-mono font-black tracking-tight glow-text text-5xl sm:text-6xl">
+          <h1 className="mt-4 font-mono font-black tracking-tight glow-text text-4xl sm:text-5xl">
             DETECT<span style={{ color: c.blue }}>X</span>
           </h1>
 
-          <p className="mt-4 font-mono text-sm sm:text-base" style={{ color: c.text }}>
+          <p className="mt-2 font-mono text-sm sm:text-base" style={{ color: c.text }}>
             <span style={{ color: c.blue }}>&gt;</span> natural language in. production detection logic out.
           </p>
-          <p className="mx-auto mt-3 max-w-xl text-sm sm:text-base leading-relaxed" style={{ color: c.muted }}>
-            Transform threat descriptions into production-grade detection logic across
-            KQL, SPL, XQL, EQL, SQL, AQL, Trend Micro, and Python.
-          </p>
+        </div>
+
+        {/* Prompt Box pulled right up under the hero */}
+        <div
+          className="mx-auto mt-6 max-w-3xl overflow-hidden rounded-2xl text-left"
+          style={{ border: `1px solid ${c.line}`, backgroundColor: c.panel, boxShadow: `0 0 0 1px ${c.void}, 0 20px 60px -20px ${c.blue}22` }}
+        >
+          <div
+            className="flex items-center gap-2 px-4 py-2 font-mono text-xs"
+            style={{ borderBottom: `1px solid ${c.line}`, color: c.mutedDim, backgroundColor: c.panel2 }}
+          >
+            <Terminal size={13} /> detection_intent.prompt
+          </div>
+          <div className="p-4">
+            <div className="flex items-start gap-2">
+              <span className="mt-3 font-mono text-sm" style={{ color: c.blue }}>&gt;</span>
+              <textarea
+                value={promptValue}
+                onChange={(e) => setPromptValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit()
+                }}
+                rows={2}
+                placeholder="e.g. alert when a service account authenticates from two countries within 10 minutes"
+                className="w-full resize-none bg-transparent py-2 font-mono text-sm leading-relaxed outline-none placeholder:opacity-60"
+                style={{ color: c.text }}
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+              <span className="font-mono text-xs" style={{ color: c.mutedDim }}>
+                ⌘/Ctrl + Enter to run
+              </span>
+              <button
+                onClick={submit}
+                disabled={loading || !promptValue.trim()}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-opacity focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-40"
+                style={{ backgroundColor: c.blue, color: '#08090c' }}
+              >
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
+                Generate rules
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Example Rule Suggestions */}
+        <div className="mx-auto mt-3 flex max-w-3xl flex-wrap items-center justify-center gap-2 font-mono text-xs">
+          <span style={{ color: c.mutedDim }}>Try:</span>
+          {EXAMPLES.map((ex) => (
+            <button
+              key={ex}
+              onClick={() => setPromptValue(ex)}
+              className="rounded-md px-2.5 py-1 transition-colors hover:cursor-pointer"
+              style={{ border: `1px solid ${c.line}`, backgroundColor: c.panel, color: c.muted }}
+            >
+              {ex}
+            </button>
+          ))}
         </div>
       </div>
     </section>
@@ -170,7 +235,7 @@ function Hero() {
 --------------------------------------------------------------------- */
 function StatStrip({ elapsed }) {
   return (
-    <div className="mx-auto max-w-6xl px-6">
+    <div className="mx-auto max-w-6xl px-6 mt-6">
       <div
         className="grid grid-cols-2 sm:grid-cols-4 rounded-2xl overflow-hidden"
         style={{ border: `1px solid ${c.line}`, backgroundColor: c.panel }}
@@ -207,67 +272,11 @@ function StatStrip({ elapsed }) {
 }
 
 /* ---------------------------------------------------------------------
-   PROMPT FORM
---------------------------------------------------------------------- */
-function PromptForm({ onSubmit, loading }) {
-  const [value, setValue] = useState('')
-
-  const submit = () => {
-    if (!value.trim() || loading) return
-    onSubmit(value)
-  }
-
-  return (
-    <div
-      className="mx-auto mt-8 max-w-3xl overflow-hidden rounded-2xl"
-      style={{ border: `1px solid ${c.line}`, backgroundColor: c.panel, boxShadow: `0 0 0 1px ${c.void}, 0 20px 60px -20px ${c.blue}22` }}
-    >
-      <div
-        className="flex items-center gap-2 px-4 py-2 font-mono text-xs"
-        style={{ borderBottom: `1px solid ${c.line}`, color: c.mutedDim, backgroundColor: c.panel2 }}
-      >
-        <Terminal size={13} /> detection_intent.prompt
-      </div>
-      <div className="p-4">
-        <div className="flex items-start gap-2">
-          <span className="mt-3 font-mono text-sm" style={{ color: c.blue }}>&gt;</span>
-          <textarea
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') submit()
-            }}
-            rows={3}
-            placeholder="e.g. alert when a service account authenticates from two countries within 10 minutes"
-            className="w-full resize-none bg-transparent py-2 font-mono text-sm leading-relaxed outline-none placeholder:opacity-60"
-            style={{ color: c.text }}
-          />
-        </div>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="font-mono text-xs" style={{ color: c.mutedDim }}>
-            ⌘/Ctrl + Enter to run
-          </span>
-          <button
-            onClick={submit}
-            disabled={loading || !value.trim()}
-            className="inline-flex items-center gap-2 rounded-lg px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider transition-opacity focus:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-40"
-            style={{ backgroundColor: c.blue, color: '#08090c' }}
-          >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
-            Generate rules
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/* ---------------------------------------------------------------------
    PIPELINE STAGES
 --------------------------------------------------------------------- */
 function PipelineStages({ activeIdx, loading }) {
   return (
-    <div className="mt-14">
+    <div className="mt-10">
       <SectionLabel>Pipeline</SectionLabel>
       <div className="mt-3 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {PIPELINE.map((p, i) => {
@@ -309,7 +318,7 @@ function PipelineStages({ activeIdx, loading }) {
 --------------------------------------------------------------------- */
 function FormatGrid() {
   return (
-    <div className="mt-14">
+    <div className="mt-10">
       <SectionLabel>Output formats</SectionLabel>
       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {FORMATS.map((f) => {
@@ -361,7 +370,7 @@ function FormatGrid() {
 function LoadingPanel({ stageIdx }) {
   return (
     <div
-      className="mt-14 flex flex-col items-center justify-center gap-4 rounded-2xl py-16 animate-fadeUp"
+      className="mt-10 flex flex-col items-center justify-center gap-4 rounded-2xl py-16 animate-fadeUp"
       style={{ border: `1px solid ${c.line}`, backgroundColor: c.panel }}
     >
       <div
@@ -381,7 +390,7 @@ function LoadingPanel({ stageIdx }) {
 function EmptyState() {
   return (
     <div
-      className="mt-14 rounded-2xl px-8 py-14 text-center"
+      className="mt-10 rounded-2xl px-8 py-14 text-center"
       style={{ border: `1px dashed ${c.line2}`, backgroundColor: c.panel }}
     >
       <div
@@ -405,7 +414,7 @@ function EmptyState() {
 function ErrorBanner({ message, onRetry }) {
   return (
     <div
-      className="mt-14 flex items-start gap-3 rounded-2xl px-5 py-4"
+      className="mt-10 flex items-start gap-3 rounded-2xl px-5 py-4"
       style={{ border: `1px solid ${c.danger}55`, backgroundColor: c.dangerSoft }}
     >
       <AlertTriangle size={17} style={{ color: c.danger }} className="mt-0.5 shrink-0" />
@@ -448,7 +457,7 @@ function ResultPanel({ result, prompt, onReset }) {
   const activeFormat = FORMATS.find((f) => f.id === active)
 
   return (
-    <div className="mt-14 animate-fadeUp">
+    <div className="mt-10 animate-fadeUp">
       <div className="flex items-center justify-between">
         <SectionLabel>Result</SectionLabel>
         <button
@@ -518,6 +527,7 @@ function ResultPanel({ result, prompt, onReset }) {
 export default function App() {
   const [result, setResult] = useState(null)
   const [prompt, setPrompt] = useState('')
+  const [promptValue, setPromptValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [stageIdx, setStageIdx] = useState(0)
@@ -563,6 +573,7 @@ export default function App() {
     setResult(null)
     setError(null)
     setPrompt('')
+    setPromptValue('')
   }
 
   return (
@@ -599,8 +610,12 @@ export default function App() {
       <Header />
 
       <main className="flex-1">
-        <Hero />
-        <PromptForm onSubmit={handleSubmit} loading={loading} />
+        <HeroAndForm 
+          onSubmit={handleSubmit} 
+          loading={loading} 
+          promptValue={promptValue} 
+          setPromptValue={setPromptValue} 
+        />
 
         <section className="mx-auto max-w-6xl px-6 pb-24">
           <StatStrip elapsed={elapsed} />
