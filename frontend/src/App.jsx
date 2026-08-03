@@ -444,9 +444,12 @@ function ResultPanel({ result, prompt, onReset }) {
   const [active, setActive] = useState('kql')
   const [copied, setCopied] = useState(false)
 
+  const activeLangData = result.languages?.[active]
+  const codeContent = activeLangData?.code || '// No code generated for this format.'
+
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(result[active])
+      await navigator.clipboard.writeText(codeContent)
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
@@ -509,12 +512,13 @@ function ResultPanel({ result, prompt, onReset }) {
           ))}
         </div>
 
-        <div className="px-4 py-2 text-xs font-mono" style={{ color: c.mutedDim, backgroundColor: c.panel2 }}>
-          {activeFormat?.vendor}
+        <div className="px-4 py-2 text-xs font-mono flex items-center justify-between" style={{ color: c.mutedDim, backgroundColor: c.panel2 }}>
+          <span>{activeFormat?.vendor}</span>
+          {activeLangData?.notes && <span className="italic opacity-80">{activeLangData.notes}</span>}
         </div>
 
         <pre className="overflow-x-auto px-4 py-4 font-mono text-xs leading-relaxed" style={{ color: c.text }}>
-          <code>{result[active]}</code>
+          <code>{codeContent}</code>
         </pre>
       </div>
     </div>
