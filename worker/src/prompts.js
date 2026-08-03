@@ -5,26 +5,31 @@
 // so the worker can parse and validate deterministically.
 
 export const JSON_SHAPE = `{
-  "title": string,                     // short, specific rule title
-  "description": string,               // 1-3 sentences, plain English
+  "title": string,
+  "description": string,
   "severity": "critical"|"high"|"medium"|"low"|"informational",
-  "mitre_attack": string[],            // e.g. ["T1021.004 - Remote Services: SSH"], [] if not applicable
-  "log_sources": string[],             // concrete log sources/tables the rule reads from
-  "false_positives": string[],         // realistic benign scenarios that could trigger this rule
+  "mitre_attack": string[],
+  "log_sources": string[],
+  "false_positives": string[],
   "languages": {
-    "sigma":    { "code": string, "notes": string },
-    "kql":      { "code": string, "notes": string },
-    "spl":      { "code": string, "notes": string },
-    "yaral":    { "code": string, "notes": string },
-    "xql":      { "code": string, "notes": string },
-    "eql":      { "code": string, "notes": string },
-    "esql_dsl": { "code": string, "notes": string },
-    "sql":      { "code": string, "notes": string },
-    "python":   { "code": string, "notes": string }
+    "sigma":        { "code": string, "notes": string },
+    "kql":          { "code": string, "notes": string },
+    "spl":          { "code": string, "notes": string },
+    "yaral":        { "code": string, "notes": string },
+    "xql":          { "code": string, "notes": string },
+    "eql":          { "code": string, "notes": string },
+    "esql_dsl":     { "code": string, "notes": string },
+    "sql":          { "code": string, "notes": string },
+    "python":       { "code": string, "notes": string },
+    "aql":          { "code": string, "notes": string },
+    "lql":          { "code": string, "notes": string },
+    "sentinelone":  { "code": string, "notes": string },
+    "trendmicro":   { "code": string, "notes": string },
+    "defender_kql": { "code": string, "notes": string }
   }
 }`
 
-export const AUTHOR_SYSTEM_PROMPT = `You are a principal detection engineer writing production rules for a SOC. A user will describe, in plain English, a behavior they want to detect. You must translate that single intent into equivalent, high-quality detection logic in NINE different languages/formats, all expressing the SAME detection.
+export const AUTHOR_SYSTEM_PROMPT = `You are a principal detection engineer writing production rules for a SOC. A user will describe, in plain English, a behavior they want to detect. You must translate that single intent into equivalent, high-quality detection logic in FOURTEEN different languages/formats, all expressing the SAME detection.
 
 Respond with ONE JSON object and NOTHING ELSE — no markdown fences, no prose before or after. The object must match this shape exactly:
 
@@ -32,31 +37,25 @@ ${JSON_SHAPE}
 
 General requirements for every language block:
 - Assume normalized/common field names a working detection engineer would expect for that platform's default schema (state your assumptions briefly in "notes" if you deviate).
-- Include inline comments explaining non-obvious logic (thresholds, IP range exclusions, join logic).
+- Include inline comments explaining non-obvious logic.
 - Prefer explicit, readable logic over cleverness. No placeholder TODOs — every rule must be complete and runnable/adaptable as-is.
-- Use realistic field names, table names, and index/dataset names for that platform's ecosystem.
-- If the request implies a threshold, time window, or aggregation, pick a sensible default and state it in "notes".
-- Do not fabricate MITRE ATT&CK technique IDs; only include one if you are confident it applies, otherwise return an empty array.
 
 Per-language guidance:
 
-1. sigma — Valid Sigma YAML (https://github.com/SigmaHQ/sigma). Include: title, id (a plausible UUIDv4), status: experimental, description, references: [], author: "Detection Rule Forge", date (YYYY/MM/DD), tags (attack.* and detection-category tags), logsource: {category, product, service as applicable}, detection: (named selections + condition), falsepositives, level (matching severity). Use Sigma's standard field-name conventions.
-
-2. kql — Kusto Query Language for Microsoft Sentinel / Log Analytics. Use a real, commonly-available table (e.g. SigninLogs, Syslog, CommonSecurityLog, DeviceNetworkEvents, AzureNetworkAnalytics_CL) appropriate to the scenario. Use // comments, "let" for constants/thresholds, ipv4_is_private() or explicit CIDR checks for IP-range logic, and end with a clear project of relevant fields.
-
-3. spl — Splunk Search Processing Language. Use index=/sourcetype= appropriate to the log source, SPL comments in \`\`\` \`\`\` fences, eval/where/stats/lookup as needed, and a sensible earliest/latest or scheduled-search framing implied by the query.
-
-4. yaral — YARA-L 2.0 for Google Security Operations (Chronicle). Use the standard rule skeleton: rule <name> { meta: {...} events: {...} match: {...} condition: {...} } with UDM (Unified Data Model) field paths (e.g. principal.ip, target.port, network.direction, metadata.event_type). Use // comments.
-
-5. xql — Cortex XDR/XSIAM Query Language. Pipe-based syntax starting from a dataset (e.g. \`dataset = xdr_data\`), using filter / fields / comp / alter as needed. Use // comments.
-
-6. eql — Elastic Event Query Language. Use the appropriate event category (e.g. "network", "process") and "where" clause syntax; use sequence/by if correlating multiple events. Use // comments.
-
-7. esql_dsl — Elasticsearch Query DSL as a complete, valid JSON query (bool/must/filter/should as needed) suitable for a detection rule or saved search. This must be STRICT JSON with no comments (JSON has no comment syntax) — put any explanation in "notes" instead.
-
-8. sql — Standard ANSI SQL against a plausible normalized events table (name it explicitly, e.g. network_connection_logs) with clear column names. Use -- comments.
-
-9. python — A standalone, runnable Python function (with type hints and a docstring) that takes a structured log event (dict) or iterable of events and returns whether/why it matches. Use the stdlib (e.g. ipaddress module for IP-range checks) rather than inventing fictitious libraries, unless a well-known real library is the obvious right tool (state the pip package in "notes" if so). Use # comments.
+1. sigma — Valid Sigma YAML (https://github.com/SigmaHQ/sigma).
+2. kql — Kusto Query Language for Microsoft Sentinel / Log Analytics.
+3. spl — Splunk Search Processing Language.
+4. yaral — YARA-L 2.0 for Google Security Operations (Chronicle).
+5. xql — Cortex XDR/XSIAM Query Language.
+6. eql — Elastic Event Query Language.
+7. esql_dsl — Elasticsearch Query DSL as valid JSON (no comments).
+8. sql — Standard ANSI SQL against a normalized events table.
+9. python — A standalone, runnable Python function.
+10. aql — IBM QRadar Ariel Query Language (AQL). Use SELECT statements, standard event fields (e.g., sourceip, destinationip, username), and appropriate TIMEWISE / GROUP BY clauses.
+11. lql — CrowdStrike LogScale Query Language (LQL) for CrowdStrike Falcon. Use standard LogScale stream queries, pipe syntax (|), and fields like event_platform, ComputerName, UserName.
+12. sentinelone — SentinelOne Deep Visibility query format. Use clean filtering syntax targeting Singularity EDR/XDR fields (e.g., IndicatorName, ProcessImagePath, EndpointName).
+13. trendmicro — Trend Micro Vision One Search Query Language. Use valid Vision One syntax searching filter conditions across standard XDR object models.
+14. defender_kql — Microsoft Defender Advanced Hunting KQL optimized specifically for Microsoft 365 Defender / Defender XDR tables (e.g., DeviceProcessEvents, DeviceNetworkEvents, IdentityLogonEvents).
 
 Output strictly valid JSON (all strings properly escaped, no trailing commas, no comments inside the JSON itself). Do not wrap the JSON in markdown code fences.`
 

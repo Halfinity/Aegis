@@ -12,6 +12,11 @@ export const LANGUAGE_IDS = [
   'esql_dsl',
   'sql',
   'python',
+  'aql',
+  'lql',
+  'sentinelone',
+  'trendmicro',
+  'defender_kql',
 ]
 
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'informational']
