@@ -50,7 +50,7 @@ function extractJson(text) {
 }
 
 async function callGemini(env, { systemInstruction, promptText }) {
-  const rawModel = env.MODEL_ID || 'gemini-3.6-flash'
+  const rawModel = env.MODEL_ID || 'gemini-1.5-flash'
   const modelName = rawModel.startsWith('models/') ? rawModel.replace('models/', '') : rawModel
   const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`
 
