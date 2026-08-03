@@ -265,7 +265,7 @@ function StatStrip({ elapsed }) {
         </span>
         <span>PIPELINE <span style={{ color: c.muted }}>4 stages loaded</span></span>
         <span>LAST RUN <span style={{ color: c.muted }}>{elapsed ?? '--:--'}</span></span>
-        <span>MODEL <span style={{ color: c.muted }}>gemini-1.5-flash</span></span>
+        <span>MODEL <span style={{ color: c.muted }}>gemini-3.6-flash</span></span>
       </div>
     </div>
   )
