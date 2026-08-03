@@ -3,17 +3,34 @@
 // frontend/src/lib/languages.js when adding a new output language.
 
 export const LANGUAGE_IDS = [
-  'sigma',
   'kql',
   'spl',
-  'yaral',
   'xql',
   'eql',
   'sql',
-  'python',
   'aql',
-  'defender_kql',
+  'trendmicro',
+  'python',
 ]
+
+export const JSON_SHAPE = `{
+  "title": string,
+  "description": string,
+  "severity": "critical"|"high"|"medium"|"low"|"informational",
+  "mitre_attack": string[],
+  "log_sources": string[],
+  "false_positives": string[],
+  "languages": {
+    "kql":        { "code": string, "notes": string },
+    "spl":        { "code": string, "notes": string },
+    "xql":        { "code": string, "notes": string },
+    "eql":        { "code": string, "notes": string },
+    "sql":        { "code": string, "notes": string },
+    "aql":        { "code": string, "notes": string },
+    "trendmicro": { "code": string, "notes": string },
+    "python":     { "code": string, "notes": string }
+  }
+}`
 
 export const SEVERITIES = ['critical', 'high', 'medium', 'low', 'informational']
 

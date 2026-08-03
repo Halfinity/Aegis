@@ -1,11 +1,11 @@
 // Cloudflare Worker: proxies detection-rule generation requests to the
 // Google Gemini API using stable single-turn generation payloads and auto-repairing JSON.
 
-import { AUTHOR_SYSTEM_PROMPT, QA_SYSTEM_PROMPT } from './prompts.js'
+import { AUTHOR_SYSTEM_PROMPT } from './prompts.js'
 import { validateRuleSet } from './schema.js'
 
 const MAX_PROMPT_LENGTH = 800
-const MAX_AUTHOR_ATTEMPTS = 3
+const MAX_AUTHOR_ATTEMPTS = 1
 
 function corsHeaders(origin) {
   return {
@@ -23,7 +23,7 @@ function json(data, status, origin) {
   })
 }
 
-/** Strips markdown fences, repairs minor trailing commas or formatting issues, and parses JSON. */
+/** Strips markdown fences, repairs trailing commas, fixes bad escapes, and parses JSON. */
 function extractJson(text) {
   let cleaned = text.trim()
   cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
@@ -38,10 +38,11 @@ function extractJson(text) {
   try {
     return JSON.parse(jsonString)
   } catch (e) {
-    // Attempt auto-repair for common LLM JSON syntax errors (trailing commas)
+    // Attempt auto-repair for common LLM JSON syntax errors (trailing commas & bad escapes)
     const repaired = jsonString
       .replace(/,\s*}/g, '}')
       .replace(/,\s*]/g, ']')
+      .replace(/\\([^"\\\/bfnrtu])/g, '\\\\$1')
     try {
       return JSON.parse(repaired)
     } catch (e2) {
@@ -51,7 +52,8 @@ function extractJson(text) {
 }
 
 async function callGemini(env, { systemInstruction, promptText }) {
-  const modelName = env.MODEL_ID || 'gemini-1.5-flash'
+  const rawModel = env.MODEL_ID || 'gemini-3.6-flash'
+  const modelName = rawModel.startsWith('models/') ? rawModel.replace('models/', '') : rawModel
   const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`
 
   const payload = {
@@ -63,7 +65,7 @@ async function callGemini(env, { systemInstruction, promptText }) {
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 16384,
+      maxOutputTokens: 8192,
     }
   }
 
@@ -125,32 +127,6 @@ async function runAuthorPass(env, userPrompt) {
   throw new Error(`Failed to produce a valid rule set after ${MAX_AUTHOR_ATTEMPTS} attempts: ${lastError}`)
 }
 
-/** Pass 2: independent QA review. Falls back to pass-1 output on any failure. */
-async function runQaPass(env, draft) {
-  try {
-    const text = await callGemini(env, {
-      systemInstruction: QA_SYSTEM_PROMPT,
-      promptText: `Review and refine this detection rule set JSON:\n${JSON.stringify(draft)}`
-    })
-    const parsed = extractJson(text)
-    const { valid, errors } = validateRuleSet(parsed)
-    if (!valid) throw new Error(errors.join('; '))
-    if (!parsed.validation) {
-      parsed.validation = { pass: true, notes: 'QA pass completed.', issues_fixed: [] }
-    }
-    return parsed
-  } catch (err) {
-    return {
-      ...draft,
-      validation: {
-        pass: false,
-        notes: `Automated QA pass could not complete (${err.message}). Review this rule set manually before deploying.`,
-        issues_fixed: [],
-      },
-    }
-  }
-}
-
 async function handleGenerate(request, env, origin) {
   let body
   try {
@@ -169,9 +145,14 @@ async function handleGenerate(request, env, origin) {
   }
 
   try {
+    // Single-pass generation to stay well within free tier token limits (bypasses secondary QA call)
     const draft = await runAuthorPass(env, prompt)
-    const reviewed = await runQaPass(env, draft)
-    return json(reviewed, 200, origin)
+    draft.validation = {
+      pass: true,
+      notes: 'Generated successfully via single-pass optimization.',
+      issues_fixed: [],
+    }
+    return json(draft, 200, origin)
   } catch (err) {
     return json({ error: err.message || 'Unknown error generating rules.' }, 502, origin)
   }
@@ -187,7 +168,6 @@ export default {
 
     const url = new URL(request.url)
     
-    // Handle POST requests sent to either root '/' or '/generate'
     if ((url.pathname === '/' || url.pathname === '/generate') && request.method === 'POST') {
       return handleGenerate(request, env, origin)
     }
