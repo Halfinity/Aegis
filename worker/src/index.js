@@ -1,15 +1,11 @@
 // Cloudflare Worker: proxies detection-rule generation requests to the
-// Claude API, holding the API key server-side, and runs a two-pass
-// generate-then-review pipeline before returning a result to the frontend.
+// Google Gemini API using stable single-turn generation payloads and auto-repairing JSON.
 
 import { AUTHOR_SYSTEM_PROMPT, QA_SYSTEM_PROMPT } from './prompts.js'
 import { validateRuleSet } from './schema.js'
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
-const ANTHROPIC_VERSION = '2023-06-01'
 const MAX_PROMPT_LENGTH = 800
 const MAX_AUTHOR_ATTEMPTS = 3
-const MAX_TOKENS = 8192
 
 function corsHeaders(origin) {
   return {
@@ -27,7 +23,7 @@ function json(data, status, origin) {
   })
 }
 
-/** Strips accidental markdown fences and extracts the outermost JSON object. */
+/** Strips markdown fences, repairs minor trailing commas or formatting issues, and parses JSON. */
 function extractJson(text) {
   let cleaned = text.trim()
   cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
@@ -36,53 +32,87 @@ function extractJson(text) {
   if (start === -1 || end === -1 || end <= start) {
     throw new Error('No JSON object found in model response.')
   }
-  return JSON.parse(cleaned.slice(start, end + 1))
+  
+  const jsonString = cleaned.slice(start, end + 1)
+  
+  try {
+    return JSON.parse(jsonString)
+  } catch (e) {
+    // Attempt auto-repair for common LLM JSON syntax errors (trailing commas)
+    const repaired = jsonString
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+    try {
+      return JSON.parse(repaired)
+    } catch (e2) {
+      throw e // Throw original error if repair fails
+    }
+  }
 }
 
-async function callClaude(env, { system, messages }) {
-  const res = await fetch(ANTHROPIC_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': env.ANTHROPIC_API_KEY,
-      'anthropic-version': ANTHROPIC_VERSION,
-    },
-    body: JSON.stringify({
-      model: env.MODEL_ID || 'claude-sonnet-5',
-      max_tokens: MAX_TOKENS,
-      temperature: 0.2,
-      system,
-      messages,
-    }),
-  })
+async function callGemini(env, { systemInstruction, promptText }) {
+  const modelName = env.MODEL_ID || 'gemini-1.5-flash'
+  const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`
 
-  if (!res.ok) {
-    const errBody = await res.text().catch(() => '')
-    throw new Error(`Claude API error (${res.status}): ${errBody.slice(0, 300)}`)
+  const payload = {
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: promptText }]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 8192,
+    }
   }
 
-  const data = await res.json()
-  const text = data?.content?.find((b) => b.type === 'text')?.text
-  if (!text) throw new Error('Claude API returned no text content.')
+  if (systemInstruction) {
+    payload.systemInstruction = {
+      parts: [{ text: systemInstruction }]
+    }
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+
+  const rawText = await res.text()
+  if (!res.ok) {
+    throw new Error(`Gemini API error (${res.status}): ${rawText.slice(0, 300)}`)
+  }
+
+  let data
+  try {
+    data = JSON.parse(rawText)
+  } catch {
+    throw new Error('Failed to parse Gemini API response JSON.')
+  }
+
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!text) {
+    throw new Error('Gemini API returned no text content (possible safety block or empty output).')
+  }
   return text
 }
 
 /** Pass 1: draft the rule set. Retries with error feedback if JSON is malformed/invalid. */
 async function runAuthorPass(env, userPrompt) {
-  const messages = [{ role: 'user', content: `Detection request: "${userPrompt}"` }]
+  let currentPrompt = `Detection request: "${userPrompt}"`
   let lastError = null
 
   for (let attempt = 1; attempt <= MAX_AUTHOR_ATTEMPTS; attempt++) {
     if (attempt > 1) {
-      messages.push({
-        role: 'user',
-        content: `Your previous response was invalid: ${lastError}. Return ONLY the corrected JSON object, no other text.`,
-      })
+      currentPrompt = `Detection request: "${userPrompt}"\n\nYour previous response was invalid: ${lastError}. Return ONLY the corrected valid JSON object matching the required schema, no other text.`
     }
-    const text = await callClaude(env, { system: AUTHOR_SYSTEM_PROMPT, messages })
-    messages.push({ role: 'assistant', content: text })
 
     try {
+      const text = await callGemini(env, { 
+        systemInstruction: AUTHOR_SYSTEM_PROMPT, 
+        promptText: currentPrompt 
+      })
       const parsed = extractJson(text)
       const { valid, errors } = validateRuleSet(parsed)
       if (valid) return parsed
@@ -95,12 +125,12 @@ async function runAuthorPass(env, userPrompt) {
   throw new Error(`Failed to produce a valid rule set after ${MAX_AUTHOR_ATTEMPTS} attempts: ${lastError}`)
 }
 
-/** Pass 2: independent QA review. Falls back to pass-1 output (marked unverified) on any failure. */
+/** Pass 2: independent QA review. Falls back to pass-1 output on any failure. */
 async function runQaPass(env, draft) {
   try {
-    const text = await callClaude(env, {
-      system: QA_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(draft) }],
+    const text = await callGemini(env, {
+      systemInstruction: QA_SYSTEM_PROMPT,
+      promptText: `Review and refine this detection rule set JSON:\n${JSON.stringify(draft)}`
     })
     const parsed = extractJson(text)
     const { valid, errors } = validateRuleSet(parsed)
@@ -134,8 +164,8 @@ async function handleGenerate(request, env, origin) {
   if (prompt.length > MAX_PROMPT_LENGTH) {
     return json({ error: `Prompt too long (max ${MAX_PROMPT_LENGTH} characters).` }, 400, origin)
   }
-  if (!env.ANTHROPIC_API_KEY) {
-    return json({ error: 'Server misconfiguration: ANTHROPIC_API_KEY is not set.' }, 500, origin)
+  if (!env.GEMINI_API_KEY) {
+    return json({ error: 'Server misconfiguration: GEMINI_API_KEY is not set.' }, 500, origin)
   }
 
   try {
@@ -156,11 +186,13 @@ export default {
     }
 
     const url = new URL(request.url)
-    if (url.pathname === '/generate' && request.method === 'POST') {
+    
+    // Handle POST requests sent to either root '/' or '/generate'
+    if ((url.pathname === '/' || url.pathname === '/generate') && request.method === 'POST') {
       return handleGenerate(request, env, origin)
     }
-    if (url.pathname === '/' || url.pathname === '/health') {
-      return json({ status: 'ok', service: 'detection-rule-forge-worker' }, 200, origin)
+    if (url.pathname === '/health') {
+      return json({ status: 'ok', service: 'detection-rule-forge-worker-gemini' }, 200, origin)
     }
     return json({ error: 'Not found.' }, 404, origin)
   },

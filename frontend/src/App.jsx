@@ -1,6 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
 import Header from './components/Header'
-import Footer from './components/Footer'
 import PromptForm from './components/PromptForm'
 import ResultPanel from './components/ResultPanel'
 import EmptyState from './components/EmptyState'
@@ -58,15 +57,15 @@ export default function App() {
           <div className="absolute inset-0 bg-grid-fade" />
           <div className="relative mx-auto max-w-6xl px-6 pt-16 pb-10 sm:pt-24 sm:pb-14">
             <div className="mx-auto max-w-2xl text-center animate-fade-up">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/60 px-3 py-1 text-[11px] font-medium text-accent-400">
-                Multi-format · AI-assisted · SOC-ready
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-ink-600/60 bg-ink-900/60 px-3 py-1 text-[11px] font-medium text-accent-400 cyber-badge">
+                Multi-format · Autonomous · SOC-Ready
               </span>
-              <h1 className="mt-5 text-4xl sm:text-5xl font-extrabold tracking-tight text-white">
-                Plain English in.<br />Production detection rules out.
+              <h1 className="mt-5 text-4xl sm:text-5xl font-extrabold tracking-tight text-white font-mono">
+                Natural Language in.<br />Production SIEM Logic out.
               </h1>
               <p className="mt-4 text-base text-slate-400">
-                Describe the behavior you want to catch. Get accurate, best-practice detection logic in KQL, SPL, Sigma,
-                YARA-L 2.0, XQL, EQL, Elasticsearch DSL, SQL and Python — reviewed by a second AI pass before it reaches you.
+                Transform threat descriptions into production-grade detection logic across KQL, SPL, Sigma,
+                YARA-L 2.0, XQL, EQL, Elasticsearch DSL, SQL, and Python.
               </p>
             </div>
 
@@ -82,7 +81,7 @@ export default function App() {
               <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-accent-500/10 animate-pulse-ring">
                 <Loader2 size={20} className="animate-spin text-accent-400" />
               </div>
-              <p className="text-sm text-slate-400">{STAGES[stageIdx]}</p>
+              <p className="text-sm text-slate-400 font-mono">{STAGES[stageIdx]}</p>
             </div>
           )}
 
@@ -93,8 +92,6 @@ export default function App() {
           {!loading && !error && !result && <EmptyState />}
         </section>
       </main>
-
-      <Footer />
     </div>
   )
 }
