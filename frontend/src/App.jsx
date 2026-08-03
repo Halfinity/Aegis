@@ -64,8 +64,7 @@ export default function App() {
                 Natural Language in.<br />Production SIEM Logic out.
               </h1>
               <p className="mt-4 text-base text-slate-400">
-                Transform threat descriptions into production-grade detection logic across KQL, SPL, Sigma,
-                YARA-L 2.0, XQL, EQL, Elasticsearch DSL, SQL, and Python.
+                Transform threat descriptions into production-grade detection logic across KQL, SPL, XQL, EQL, SQL, AQL, Trend Micro, and Python.
               </p>
             </div>
 
