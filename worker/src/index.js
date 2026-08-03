@@ -52,7 +52,9 @@ function extractJson(text) {
 async function callGemini(env, { systemInstruction, promptText }) {
   const rawModel = env.MODEL_ID || 'gemini-1.5-flash'
   const modelName = rawModel.startsWith('models/') ? rawModel.replace('models/', '') : rawModel
-  const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`
+  
+  // Changed /v1/ to /v1beta/ to support 1.5 model variants
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${env.GEMINI_API_KEY}`
 
   const payload = {
     contents: [
@@ -62,7 +64,7 @@ async function callGemini(env, { systemInstruction, promptText }) {
       }
     ],
     generationConfig: {
-      temperature: 0.1, // Lower temperature reduces erratic formatting tokens
+      temperature: 0.1,
       maxOutputTokens: 8192,
     }
   }
