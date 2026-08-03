@@ -50,7 +50,7 @@ function extractJson(text) {
 }
 
 async function callGemini(env, { systemInstruction, promptText }) {
-  const rawModel = env.MODEL_ID || 'gemini-1.5-flash'
+  const rawModel = env.MODEL_ID || 'gemini-2.5-flash'
   const modelName = rawModel.startsWith('models/') ? rawModel.replace('models/', '') : rawModel
   
   // Changed /v1/ to /v1beta/ to support 1.5 model variants
