@@ -2,15 +2,15 @@
 // Adding a new output format later means adding one entry here and
 // updating the worker's system prompt / schema — the UI adapts automatically.
 // Canonical metadata for every detection language the app supports.
-export const LANGUAGES = [
-  { id: 'kql', label: 'KQL', group: 'Microsoft Sentinel', ext: 'kql', prism: 'kusto', blurb: 'Kusto Query Language for Sentinel.' },
-  { id: 'spl', label: 'SPL', group: 'Splunk', ext: 'spl', prism: 'splunk-spl', blurb: 'Search Processing Language for Splunk.' },
-  { id: 'xql', label: 'XQL', group: 'Cortex XDR', ext: 'xql', prism: 'sql', blurb: 'Extended Query Language for Cortex XDR.' },
-  { id: 'eql', label: 'EQL', group: 'Elastic', ext: 'eql', prism: 'sql', blurb: 'Event Query Language for Elastic.' },
-  { id: 'sql', label: 'SQL', group: 'Generic', ext: 'sql', prism: 'sql', blurb: 'Standard ANSI SQL query.' },
-  { id: 'aql', label: 'AQL', group: 'IBM QRadar', ext: 'aql', prism: 'sql', blurb: 'Ariel Query Language for QRadar.' },
-  { id: 'trendmicro', label: 'CQL', group: 'Trend Micro', ext: 'txt', prism: 'sql', blurb: 'Trend Micro Vision One Search Query Language.' },
-  { id: 'python', label: 'Python', group: 'Generic', ext: 'py', prism: 'python', blurb: 'Standalone Python detection logic.' },
-]
+import { Search, Terminal, Radar, GitBranch, Layers, Database, ShieldAlert, Code2 } from 'lucide-react'
 
-export const LANGUAGE_MAP = Object.fromEntries(LANGUAGES.map((l) => [l.id, l]))
+export const FORMATS = [
+  { id: 'kql', label: 'KQL', vendor: 'Microsoft Sentinel / Defender', badge: 'SIEM', icon: Search, desc: 'Query language for Sentinel and Defender XDR hunting and analytics rules.' },
+  { id: 'spl', label: 'SPL', vendor: 'Splunk', badge: 'SIEM', icon: Terminal, desc: "Splunk's search processing language for correlation and saved searches." },
+  { id: 'xql', label: 'XQL', vendor: 'Cortex XDR', badge: 'XDR', icon: Radar, desc: 'Cortex XDR query language for cross-telemetry hunting and rules.' },
+  { id: 'eql', label: 'EQL', vendor: 'Elastic Security', badge: 'EDR', icon: GitBranch, desc: "Elastic's event query language for sequence and correlation detections." },
+  { id: 'sql', label: 'SQL', vendor: 'Data lake / warehouse', badge: 'DATA', icon: Layers, desc: 'Standard SQL for detections run against a data lake or warehouse.' },
+  { id: 'aql', label: 'AQL', vendor: 'IBM QRadar', badge: 'SIEM', icon: Database, desc: "QRadar's Ariel Query Language for searching normalized events and flows." },
+  { id: 'cql', label: 'Trend Micro', vendor: 'Vision One', badge: 'XDR', icon: ShieldAlert, desc: "Vision One's query syntax for cross-layer detection and response." },
+  { id: 'python', label: 'Python', vendor: 'SOAR / automation', badge: 'SCRIPT', icon: Code2, desc: 'Standalone enrichment or automation logic for SOAR playbooks.' },
+]
