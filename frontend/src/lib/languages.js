@@ -74,6 +74,46 @@ export const LANGUAGES = [
     prism: 'python',
     blurb: 'Standalone Python detection function over structured log events.',
   },
+  {
+    id: 'aql',
+    label: 'AQL',
+    group: 'IBM QRadar',
+    ext: 'aql',
+    prism: 'sql',
+    blurb: 'Ariel Query Language for IBM QRadar SIEM.',
+  },
+  {
+    id: 'lql',
+    label: 'LogScale (LQL)',
+    group: 'CrowdStrike',
+    ext: 'lql',
+    prism: 'sql',
+    blurb: 'LogScale Query Language for CrowdStrike Falcon.',
+  },
+  {
+    id: 'sentinelone',
+    label: 'Deep Visibility',
+    group: 'SentinelOne',
+    ext: 's1ql',
+    prism: 'sql',
+    blurb: 'Deep Visibility query language for SentinelOne Singularity EDR/XDR.',
+  },
+  {
+    id: 'trendmicro',
+    label: 'Vision One',
+    group: 'Trend Micro',
+    ext: 'txt',
+    prism: 'sql',
+    blurb: 'Search query language for Trend Micro Vision One XDR.',
+  },
+  {
+    id: 'defender_kql',
+    label: 'Defender KQL',
+    group: 'Microsoft Defender',
+    ext: 'kql',
+    prism: 'kusto',
+    blurb: 'Advanced Hunting KQL for Microsoft 365 Defender / Defender XDR.',
+  },
 ]
 
 export const LANGUAGE_MAP = Object.fromEntries(LANGUAGES.map((l) => [l.id, l]))
