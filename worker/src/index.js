@@ -5,7 +5,7 @@ import { AUTHOR_SYSTEM_PROMPT } from './prompts.js'
 import { validateRuleSet } from './schema.js'
 
 const MAX_PROMPT_LENGTH = 800
-const MAX_AUTHOR_ATTEMPTS = 1
+const MAX_AUTHOR_ATTEMPTS = 1 // Strict 1-pass to preserve API credits
 
 function corsHeaders(origin) {
   return {
@@ -23,7 +23,6 @@ function json(data, status, origin) {
   })
 }
 
-/** Strips markdown fences, repairs trailing commas, fixes bad escapes, and parses JSON. */
 function extractJson(text) {
   let cleaned = text.trim()
   cleaned = cleaned.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
@@ -38,7 +37,6 @@ function extractJson(text) {
   try {
     return JSON.parse(jsonString)
   } catch (e) {
-    // Attempt auto-repair for common LLM JSON syntax errors (trailing commas & bad escapes)
     const repaired = jsonString
       .replace(/,\s*}/g, '}')
       .replace(/,\s*]/g, ']')
@@ -46,7 +44,7 @@ function extractJson(text) {
     try {
       return JSON.parse(repaired)
     } catch (e2) {
-      throw e // Throw original error if repair fails
+      throw e
     }
   }
 }
@@ -64,7 +62,7 @@ async function callGemini(env, { systemInstruction, promptText }) {
       }
     ],
     generationConfig: {
-      temperature: 0.2,
+      temperature: 0.1, // Lower temperature reduces erratic formatting tokens
       maxOutputTokens: 8192,
     }
   }
@@ -100,16 +98,10 @@ async function callGemini(env, { systemInstruction, promptText }) {
   return text
 }
 
-/** Pass 1: draft the rule set. Retries with error feedback if JSON is malformed/invalid. */
 async function runAuthorPass(env, userPrompt) {
-  let currentPrompt = `Detection request: "${userPrompt}"`
-  let lastError = null
+  const currentPrompt = `Detection request: "${userPrompt}"`
 
   for (let attempt = 1; attempt <= MAX_AUTHOR_ATTEMPTS; attempt++) {
-    if (attempt > 1) {
-      currentPrompt = `Detection request: "${userPrompt}"\n\nYour previous response was invalid: ${lastError}. Return ONLY the corrected valid JSON object matching the required schema, no other text.`
-    }
-
     try {
       const text = await callGemini(env, { 
         systemInstruction: AUTHOR_SYSTEM_PROMPT, 
@@ -118,13 +110,13 @@ async function runAuthorPass(env, userPrompt) {
       const parsed = extractJson(text)
       const { valid, errors } = validateRuleSet(parsed)
       if (valid) return parsed
-      lastError = errors.join('; ')
+      throw new Error(errors.join('; '))
     } catch (err) {
-      lastError = err.message
+      if (attempt === MAX_AUTHOR_ATTEMPTS) {
+        throw err
+      }
     }
   }
-
-  throw new Error(`Failed to produce a valid rule set after ${MAX_AUTHOR_ATTEMPTS} attempts: ${lastError}`)
 }
 
 async function handleGenerate(request, env, origin) {
@@ -145,7 +137,6 @@ async function handleGenerate(request, env, origin) {
   }
 
   try {
-    // Single-pass generation to stay well within free tier token limits (bypasses secondary QA call)
     const draft = await runAuthorPass(env, prompt)
     draft.validation = {
       pass: true,
