@@ -9,13 +9,9 @@ export const LANGUAGE_IDS = [
   'yaral',
   'xql',
   'eql',
-  'esql_dsl',
   'sql',
   'python',
   'aql',
-  'lql',
-  'sentinelone',
-  'trendmicro',
   'defender_kql',
 ]
 

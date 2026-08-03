@@ -63,7 +63,7 @@ async function callGemini(env, { systemInstruction, promptText }) {
     ],
     generationConfig: {
       temperature: 0.2,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,
     }
   }
 
