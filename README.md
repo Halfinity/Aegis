@@ -1,3 +1,5 @@
+> ⚠️ **Portfolio Showcase Only:** Live rule generation is currently disabled. This repository is displayed for code review and demonstration purposes.
+
 <div align="center">
 
 # 🛡️ AEGIS - Autonomous SOC Rule Forge
