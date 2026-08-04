@@ -440,6 +440,19 @@ function ErrorBanner({ message, onRetry }) {
 /* ---------------------------------------------------------------------
    RESULT PANEL
 --------------------------------------------------------------------- */
+function highlightCode(code, lang) {
+  if (!code) return ''
+  // Escape HTML entities
+  const safe = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+
+  // Simple, robust regex-based tokenization for query and script languages
+  return safe
+    .replace(/\b(SELECT|FROM|WHERE|AND|OR|NOT|GROUP BY|ORDER BY|AS|IN|LIKE|BETWEEN|CAST|LOWER|MIN|MAX|COUNT|dataset|filter|fields|process|where|index|sourcetype|search|stats|by)\b/g, '<span style="color: #3b8eff; font-weight: bold;">$1</span>')
+    .replace(/(['"])(.*?)\1/g, '<span style="color: #34d399;">$1$2$1</span>')
+    .replace(/\b(\d+)\b/g, '<span style="color: #f5b942;">$1</span>')
+    .replace(/(\/\/.*|#.*)/g, '<span style="color: #8890a0; font-style: italic;">$1</span>')
+}
+
 function ResultPanel({ result, prompt, onReset }) {
   const [active, setActive] = useState('kql')
   const [copied, setCopied] = useState(false)
@@ -518,7 +531,7 @@ function ResultPanel({ result, prompt, onReset }) {
         </div>
 
         <pre className="overflow-x-auto px-4 py-4 font-mono text-xs leading-relaxed" style={{ color: c.text }}>
-          <code>{codeContent}</code>
+          <code dangerouslySetInnerHTML={{ __html: highlightCode(codeContent, active) }} />
         </pre>
       </div>
     </div>
