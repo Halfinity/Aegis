@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🛡️ AEGIS — Autonomous SOC Rule Forge
+# 🛡️ AEGIS - Autonomous SOC Rule Forge
 
 **Transform Natural Language into Production-Grade SIEM/EDR Detection Logic Across Multiple Formats Instantly.**
 
@@ -12,7 +12,8 @@
 ---
 
 ## 🔍 Overview
-**Aegis** is an autonomous security operations center (SOC) tool designed to bridge the gap between threat intelligence briefs and executable detection rules. By leveraging advanced language model pipelines, it translates plain-English descriptions into fully syntax-checked, review-ready detection logic across **8 industry-standard formats**.
+**Aegis** is an autonomous security operations center (SOC) tool designed to bridge the gap between threat intelligence briefs and executable detection rules. 
+By leveraging advanced language model pipelines, it translates plain-English descriptions into fully syntax-checked, review-ready detection logic across **8 industry-standard formats**.
 
 ---
 
